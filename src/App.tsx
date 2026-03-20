@@ -25,6 +25,8 @@ import {
   BarChart3,
   ExternalLink,
   MoreVertical,
+  MoreHorizontal,
+  LogOut,
   Send,
   Moon,
   Sun,
@@ -42,7 +44,21 @@ import {
   Settings2,
   Paperclip,
   Sparkles,
-  Scissors
+  Scissors,
+  User,
+  Dumbbell,
+  MessageCircle,
+  ArrowLeft,
+  Filter,
+  Phone,
+  Video as VideoIcon,
+  Smile,
+  Image as ImageIcon,
+  ChevronLeft,
+  UserCircle,
+  Calculator,
+  ClipboardList,
+  Calendar,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { UserRole, SourceItem, ThinkingStep, StudioTile, ChatMessage, TrainingSession, TrainingMaterial, QuestionBank, CrawlerConfig, PublicKnowledgeItem, BillingInfo, ModelRate, SubscriptionPlan, ConsumptionHistory, ChatHistory, Customer, CustomerTag } from './types';
@@ -56,6 +72,20 @@ const ROLE_ICONS = {
 };
 
 export default function App() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [mobileTab, setMobileTab] = useState<'messages' | 'customers' | 'training' | 'me'>('messages');
+  const [mobileChatId, setMobileChatId] = useState<string | null>(null);
+  const [isMobileToolsOpen, setIsMobileToolsOpen] = useState(false);
+  const [isMobileAddCustomerOpen, setIsMobileAddCustomerOpen] = useState(false);
+  const [isMobileNewTrainingOpen, setIsMobileNewTrainingOpen] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const [appVersion, setAppVersion] = useState<'web' | 'miniprogram'>('web');
   const [role, setRole] = useState<UserRole>(UserRole.AGENT);
   const [tlViewMode, setTlViewMode] = useState<'management' | 'personal'>('management');
   const [tlManagementTab, setTlManagementTab] = useState<'monitoring' | 'materials' | 'questions' | 'resources'>('monitoring');
@@ -487,14 +517,592 @@ export default function App() {
     setMessages(prev => [...prev, aiMsg]);
   };
 
+  if (isMobile) {
+    // If Admin/Ops, force to Agent for mobile demo
+    const effectiveRole = (role === UserRole.ADMINISTRATOR || role === UserRole.OPS) ? UserRole.AGENT : role;
+
+    return (
+      <div className={`flex flex-col h-screen bg-app-bg text-app-text font-sans ${theme === 'dark' ? 'dark' : ''}`}>
+        {/* Mobile Header */}
+        <div className="px-4 py-3 bg-app-pane border-b border-app-border flex items-center justify-between sticky top-0 z-30 backdrop-blur-md bg-app-pane/80">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-app-accent flex items-center justify-center text-app-bg font-bold">
+              B
+            </div>
+            <h1 className="text-base font-bold tracking-tight">Bridge & Choice</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')} className="p-2 hover:bg-app-bg rounded-full transition-colors">
+              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </button>
+            <div className="w-8 h-8 rounded-full bg-app-accent/20 border border-app-accent/30 flex items-center justify-center overflow-hidden">
+              <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${effectiveRole}`} alt="avatar" referrerPolicy="no-referrer" />
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Content */}
+        <div className="flex-1 overflow-y-auto pb-20">
+          <AnimatePresence mode="wait">
+            {mobileChatId ? (
+              <motion.div
+                key="chat-view"
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                className="fixed inset-0 z-50 bg-app-bg flex flex-col"
+              >
+                <div className="px-4 py-3 bg-app-pane border-b border-app-border flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => setMobileChatId(null)} className="p-1 hover:bg-app-bg rounded-lg">
+                      <ChevronLeft className="w-6 h-6" />
+                    </button>
+                    <div>
+                      <h2 className="text-sm font-bold">{customers.find(c => c.id === mobileChatId)?.name || '客户对话'}</h2>
+                      <p className="text-[10px] text-emerald-500 font-medium">在线</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button className="p-2 hover:bg-app-bg rounded-lg text-app-text-muted"><Phone className="w-4 h-4" /></button>
+                    <button className="p-2 hover:bg-app-bg rounded-lg text-app-text-muted"><VideoIcon className="w-4 h-4" /></button>
+                    <button 
+                      onClick={() => setIsMobileToolsOpen(true)}
+                      className="px-3 py-1.5 border border-red-500 rounded-lg text-red-500 font-bold text-xs active:scale-95 transition-all"
+                    >
+                      工具
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {messages.map((msg, idx) => (
+                    <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${
+                        msg.role === 'user' 
+                          ? 'bg-app-accent text-app-bg rounded-tr-none' 
+                          : 'bg-app-pane border border-app-border rounded-tl-none'
+                      }`}>
+                        {msg.text}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Mobile Tools Menu Overlay */}
+                <AnimatePresence>
+                  {isMobileToolsOpen && (
+                    <>
+                      <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setIsMobileToolsOpen(false)}
+                        className="fixed inset-0 bg-black/40 z-[60] backdrop-blur-sm"
+                      />
+                      <motion.div 
+                        initial={{ y: '100%' }}
+                        animate={{ y: 0 }}
+                        exit={{ y: '100%' }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                        className="fixed bottom-0 left-0 right-0 bg-app-pane rounded-t-[32px] z-[70] p-6 pb-10 shadow-2xl border-t border-app-border max-h-[90vh] overflow-y-auto"
+                      >
+                        <div className="w-12 h-1.5 bg-app-border rounded-full mx-auto mb-6" />
+                        
+                        <div className="flex items-center justify-between mb-6">
+                          <h3 className="text-xl font-bold">业务工具箱</h3>
+                          <button onClick={() => setIsMobileToolsOpen(false)} className="p-2 text-app-text-muted">
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+
+                        <div className="relative mb-6">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-app-text-muted" />
+                          <input 
+                            type="text" 
+                            placeholder="搜索工具..."
+                            className="w-full bg-app-bg border border-app-border rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-app-accent"
+                          />
+                        </div>
+
+                        <div className="space-y-8">
+                          {/* Recently Used */}
+                          <section>
+                            <h4 className="text-[10px] font-bold text-app-text-muted uppercase tracking-widest mb-4">最近使用</h4>
+                            <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+                              {[
+                                { icon: <Zap className="w-5 h-5" />, label: '保费测算', color: 'bg-amber-500' },
+                                { icon: <FileText className="w-5 h-5" />, label: '产品对比', color: 'bg-blue-500' },
+                                { icon: <Shield className="w-5 h-5" />, label: '合规核查', color: 'bg-emerald-500' },
+                              ].map((tool, i) => (
+                                <button key={i} className="flex flex-col items-center gap-2 shrink-0">
+                                  <div className={`w-12 h-12 ${tool.color} text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-transform`}>
+                                    {tool.icon}
+                                  </div>
+                                  <span className="text-[10px] font-medium">{tool.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </section>
+
+                          {/* Tool Categories */}
+                          {[
+                            {
+                              title: '销售获客',
+                              tools: [
+                                { icon: <ImageIcon className="w-5 h-5" />, label: '海报生成', color: 'bg-purple-500' },
+                                { icon: <Share2 className="w-5 h-5" />, label: '分享方案', color: 'bg-sky-500' },
+                                { icon: <Calculator className="w-5 h-5" />, label: '收益演示', color: 'bg-orange-500' },
+                                { icon: <ClipboardList className="w-5 h-5" />, label: '问卷调查', color: 'bg-cyan-500' },
+                              ]
+                            },
+                            {
+                              title: '业务支持',
+                              tools: [
+                                { icon: <FileQuestion className="w-5 h-5" />, label: '条款解析', color: 'bg-rose-500' },
+                                { icon: <Users className="w-5 h-5" />, label: '客户画像', color: 'bg-indigo-500' },
+                                { icon: <Book className="w-5 h-5" />, label: '知识库', color: 'bg-teal-500' },
+                                { icon: <Calendar className="w-5 h-5" />, label: '预约面谈', color: 'bg-violet-500' },
+                              ]
+                            }
+                          ].map((category, idx) => (
+                            <section key={idx}>
+                              <h4 className="text-[10px] font-bold text-app-text-muted uppercase tracking-widest mb-4">{category.title}</h4>
+                              <div className="grid grid-cols-4 gap-6">
+                                {category.tools.map((tool, i) => (
+                                  <button key={i} className="flex flex-col items-center gap-2 group">
+                                    <div className={`w-14 h-14 ${tool.color} text-white rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-transform`}>
+                                      {tool.icon}
+                                    </div>
+                                    <span className="text-[10px] font-medium text-app-text-muted">{tool.label}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </section>
+                          ))}
+                        </div>
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+
+                <div className="p-4 bg-app-pane border-t border-app-border">
+                  <div className="flex items-center gap-2">
+                    <button className="p-2 text-app-text-muted"><Smile className="w-5 h-5" /></button>
+                    <input 
+                      type="text" 
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                      placeholder="输入消息..."
+                      className="flex-1 bg-app-bg border border-app-border rounded-full px-4 py-2 text-sm focus:outline-none focus:border-app-accent"
+                    />
+                    <button 
+                      onClick={() => setIsMobileToolsOpen(true)}
+                      className="p-2 text-app-text-muted hover:text-app-accent transition-colors"
+                      title="工具"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
+                    <button 
+                      onClick={handleSend}
+                      className="p-2 bg-app-accent text-app-bg rounded-full shadow-lg shadow-app-accent/20"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ) : (
+              <motion.div
+                key={mobileTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="p-4"
+              >
+                {mobileTab === 'messages' && (
+                  <div className="space-y-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-app-text-muted" />
+                      <input 
+                        type="text" 
+                        placeholder="搜索对话..."
+                        className="w-full bg-app-pane border border-app-border rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-app-accent"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      {customers.map(customer => (
+                        <div 
+                          key={customer.id}
+                          onClick={() => setMobileChatId(customer.id)}
+                          className="flex items-center gap-3 p-3 hover:bg-app-pane rounded-2xl transition-all active:scale-[0.98] cursor-pointer"
+                        >
+                          <div className="w-12 h-12 rounded-full bg-app-accent/10 border border-app-accent/20 flex items-center justify-center overflow-hidden">
+                            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${customer.name}`} alt="avatar" referrerPolicy="no-referrer" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <h3 className="text-sm font-bold truncate">{customer.name}</h3>
+                              <span className="text-[10px] text-app-text-muted">14:20</span>
+                            </div>
+                            <p className="text-xs text-app-text-muted truncate">
+                              {customer.id === 'c1' ? '好的，我会尽快查看您发来的文件。' : '谢谢您的建议，我会考虑的。'}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {mobileTab === 'customers' && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-bold">客户列表</h2>
+                      <button 
+                        onClick={() => setIsMobileAddCustomerOpen(true)}
+                        className="p-2 bg-app-accent text-app-bg rounded-xl active:scale-90 transition-transform"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                    
+                    {/* Mobile Add Customer Modal */}
+                    <AnimatePresence>
+                      {isMobileAddCustomerOpen && (
+                        <>
+                          <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsMobileAddCustomerOpen(false)}
+                            className="fixed inset-0 bg-black/40 z-[60] backdrop-blur-sm"
+                          />
+                          <motion.div 
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            className="fixed bottom-0 left-0 right-0 bg-app-pane rounded-t-[32px] z-[70] p-6 pb-10 border-t border-app-border"
+                          >
+                            <div className="flex items-center justify-between mb-6">
+                              <h3 className="text-lg font-bold">新增客户</h3>
+                              <button onClick={() => setIsMobileAddCustomerOpen(false)} className="p-2 text-app-text-muted">
+                                <X className="w-5 h-5" />
+                              </button>
+                            </div>
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-[10px] font-bold text-app-text-muted uppercase tracking-widest mb-1.5">姓名</label>
+                                <input 
+                                  type="text" 
+                                  className="w-full bg-app-bg border border-app-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-app-accent"
+                                  placeholder="请输入客户姓名"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-app-text-muted uppercase tracking-widest mb-1.5">微信号</label>
+                                <input 
+                                  type="text" 
+                                  className="w-full bg-app-bg border border-app-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-app-accent"
+                                  placeholder="请输入微信号"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] font-bold text-app-text-muted uppercase tracking-widest mb-1.5">手机号</label>
+                                <input 
+                                  type="tel" 
+                                  className="w-full bg-app-bg border border-app-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-app-accent"
+                                  placeholder="请输入手机号"
+                                />
+                              </div>
+                              <button 
+                                onClick={() => setIsMobileAddCustomerOpen(false)}
+                                className="w-full py-4 bg-app-accent text-app-bg font-bold rounded-2xl shadow-xl shadow-app-accent/20 active:scale-[0.98] transition-all mt-4"
+                              >
+                                保存客户
+                              </button>
+                            </div>
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                    <div className="space-y-3">
+                      {customers.map(customer => (
+                        <div key={customer.id} className="bg-app-pane p-4 rounded-2xl border border-app-border">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-app-bg flex items-center justify-center overflow-hidden">
+                                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${customer.name}`} alt="avatar" referrerPolicy="no-referrer" />
+                              </div>
+                              <div>
+                                <h3 className="text-sm font-bold">{customer.name}</h3>
+                                <p className="text-[10px] text-app-text-muted">{customer.phone}</p>
+                              </div>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              customer.status === 'active' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'
+                            }`}>
+                              {customer.status === 'active' ? '活跃' : '跟进中'}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {customer.tags.map(tag => (
+                              <span key={tag.id} className="px-2 py-0.5 bg-app-bg border border-app-border rounded-md text-[9px] text-app-text-muted">
+                                {tag.label}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {mobileTab === 'training' && (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-bold">AI 模拟对练</h2>
+                      <button 
+                        onClick={() => setIsMobileNewTrainingOpen(true)}
+                        className="px-3 py-1.5 bg-app-accent text-app-bg text-xs font-bold rounded-xl active:scale-90 transition-transform"
+                      >
+                        开始新对练
+                      </button>
+                    </div>
+
+                    {/* Mobile New Training Modal */}
+                    <AnimatePresence>
+                      {isMobileNewTrainingOpen && (
+                        <>
+                          <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsMobileNewTrainingOpen(false)}
+                            className="fixed inset-0 bg-black/40 z-[60] backdrop-blur-sm"
+                          />
+                          <motion.div 
+                            initial={{ y: '100%' }}
+                            animate={{ y: 0 }}
+                            exit={{ y: '100%' }}
+                            className="fixed bottom-0 left-0 right-0 bg-app-pane rounded-t-[32px] z-[70] p-6 pb-10 border-t border-app-border"
+                          >
+                            <div className="flex items-center justify-between mb-6">
+                              <h3 className="text-lg font-bold">选择对练场景</h3>
+                              <button onClick={() => setIsMobileNewTrainingOpen(false)} className="p-2 text-app-text-muted">
+                                <X className="w-5 h-5" />
+                              </button>
+                            </div>
+                            <div className="space-y-3">
+                              {[
+                                { title: '高净值客户异议处理', desc: '针对大额保单的税务与传承疑虑', difficulty: '困难' },
+                                { title: '重疾险条款深度解析', desc: '对比不同产品的保障范围与等待期', difficulty: '中等' },
+                                { title: '优才计划申请流程咨询', desc: '模拟客户咨询申请细节与材料准备', difficulty: '简单' },
+                              ].map((scenario, i) => (
+                                <button 
+                                  key={i}
+                                  onClick={() => {
+                                    startTraining(scenario.title);
+                                    setIsMobileNewTrainingOpen(false);
+                                  }}
+                                  className="w-full p-4 bg-app-bg border border-app-border rounded-2xl text-left active:bg-app-pane transition-colors flex items-center justify-between group"
+                                >
+                                  <div>
+                                    <p className="text-sm font-bold mb-1">{scenario.title}</p>
+                                    <p className="text-[10px] text-app-text-muted">{scenario.desc}</p>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                                      scenario.difficulty === '困难' ? 'bg-rose-500/10 text-rose-500' : 
+                                      scenario.difficulty === '中等' ? 'bg-amber-500/10 text-amber-500' : 
+                                      'bg-emerald-500/10 text-emerald-500'
+                                    }`}>
+                                      {scenario.difficulty}
+                                    </span>
+                                    <ChevronRight className="w-4 h-4 text-app-text-muted group-active:translate-x-1 transition-transform" />
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-app-pane p-4 rounded-2xl border border-app-border text-center">
+                        <div className="w-10 h-10 bg-app-accent/10 text-app-accent rounded-xl flex items-center justify-center mx-auto mb-2">
+                          <Zap className="w-5 h-5" />
+                        </div>
+                        <p className="text-xs font-bold">快速对练</p>
+                        <p className="text-[9px] text-app-text-muted mt-1">5分钟即时模拟</p>
+                      </div>
+                      <div className="bg-app-pane p-4 rounded-2xl border border-app-border text-center">
+                        <div className="w-10 h-10 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center mx-auto mb-2">
+                          <Book className="w-5 h-5" />
+                        </div>
+                        <p className="text-xs font-bold">场景通关</p>
+                        <p className="text-[9px] text-app-text-muted mt-1">深度业务实战</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-bold text-app-text-muted uppercase tracking-widest">历史记录</h3>
+                      {trainingSessions.map(session => (
+                        <div key={session.id} className="bg-app-pane p-4 rounded-2xl border border-app-border flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-app-bg flex items-center justify-center text-app-accent font-bold text-xs">
+                              {session.score}
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold">{session.scenario}</p>
+                              <p className="text-[9px] text-app-text-muted">{session.date}</p>
+                            </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-app-text-muted" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {mobileTab === 'me' && (
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-4 p-4 bg-app-pane rounded-3xl border border-app-border">
+                      <div className="w-16 h-16 rounded-full bg-app-accent/10 border-2 border-app-accent/20 overflow-hidden">
+                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${effectiveRole}`} alt="avatar" referrerPolicy="no-referrer" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold">财富顾问 - 小王</h2>
+                        <p className="text-xs text-app-text-muted">工号: 882931</p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="px-2 py-0.5 bg-app-accent text-app-bg text-[9px] font-bold rounded-full uppercase">
+                            {effectiveRole}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-app-pane rounded-3xl border border-app-border overflow-hidden">
+                      <div className="p-4 border-b border-app-border flex items-center justify-between active:bg-app-bg transition-colors">
+                        <div className="flex items-center gap-3">
+                          <Settings className="w-4 h-4 text-app-text-muted" />
+                          <span className="text-sm">个人设置</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-app-text-muted" />
+                      </div>
+                      <div className="p-4 border-b border-app-border flex items-center justify-between active:bg-app-bg transition-colors">
+                        <div className="flex items-center gap-3">
+                          <Shield className="w-4 h-4 text-app-text-muted" />
+                          <span className="text-sm">安全中心</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-app-text-muted" />
+                      </div>
+                      <div className="p-4 flex items-center justify-between active:bg-app-bg transition-colors">
+                        <div className="flex items-center gap-3">
+                          <FileText className="w-4 h-4 text-app-text-muted" />
+                          <span className="text-sm">合规手册</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-app-text-muted" />
+                      </div>
+                      <div className="p-4 flex items-center justify-between active:bg-app-bg transition-colors text-rose-500">
+                        <div className="flex items-center gap-3">
+                          <LogOut className="w-4 h-4" />
+                          <span className="text-sm font-bold">退出登录</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-app-pane rounded-3xl border border-app-border p-4">
+                      <h3 className="text-xs font-bold text-app-text-muted uppercase tracking-widest mb-4">切换角色 (Demo Only)</h3>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button 
+                          onClick={() => setRole(UserRole.AGENT)}
+                          className={`py-2 rounded-xl text-[10px] font-bold border transition-all ${role === UserRole.AGENT ? 'bg-app-accent border-app-accent text-app-bg' : 'border-app-border text-app-text-muted'}`}
+                        >
+                          业务顾问 (Agent)
+                        </button>
+                        <button 
+                          onClick={() => setRole(UserRole.TEAM_LEADER)}
+                          className={`py-2 rounded-xl text-[10px] font-bold border transition-all ${role === UserRole.TEAM_LEADER ? 'bg-app-accent border-app-accent text-app-bg' : 'border-app-border text-app-text-muted'}`}
+                        >
+                          团队主管 (TL)
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Mobile Tab Bar */}
+        {!mobileChatId && (
+          <div className="fixed bottom-0 left-0 right-0 bg-app-pane/80 backdrop-blur-xl border-t border-app-border px-6 py-3 flex items-center justify-between z-40">
+            <button 
+              onClick={() => setMobileTab('messages')}
+              className={`flex flex-col items-center gap-1 transition-all ${mobileTab === 'messages' ? 'text-app-accent scale-110' : 'text-app-text-muted'}`}
+            >
+              <MessageCircle className="w-6 h-6" />
+              <span className="text-[9px] font-bold">消息</span>
+            </button>
+            <button 
+              onClick={() => setMobileTab('customers')}
+              className={`flex flex-col items-center gap-1 transition-all ${mobileTab === 'customers' ? 'text-app-accent scale-110' : 'text-app-text-muted'}`}
+            >
+              <Users className="w-6 h-6" />
+              <span className="text-[9px] font-bold">客户</span>
+            </button>
+            <button 
+              onClick={() => setMobileTab('training')}
+              className={`flex flex-col items-center gap-1 transition-all ${mobileTab === 'training' ? 'text-app-accent scale-110' : 'text-app-text-muted'}`}
+            >
+              <Dumbbell className="w-6 h-6" />
+              <span className="text-[9px] font-bold">对练</span>
+            </button>
+            <button 
+              onClick={() => setMobileTab('me')}
+              className={`flex flex-col items-center gap-1 transition-all ${mobileTab === 'me' ? 'text-app-accent scale-110' : 'text-app-text-muted'}`}
+            >
+              <UserCircle className="w-6 h-6" />
+              <span className="text-[9px] font-bold">我的</span>
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="triple-pane-container">
       {/* Sidebar / Role Switcher */}
       <div className={`pane-left ${!isSidebarOpen ? 'w-16' : 'w-72'} border-r border-app-border shadow-xl shadow-black/20`}>
         <div className="p-4 border-b border-app-border flex items-center justify-between bg-app-pane backdrop-blur-md">
-          <div className={`flex items-center gap-2 overflow-hidden ${!isSidebarOpen ? 'hidden' : ''}`}>
-            <div className="w-8 h-8 bg-app-accent rounded-lg flex items-center justify-center text-app-bg font-bold shadow-lg shadow-app-accent/20">B</div>
-            <span className="font-bold text-lg tracking-tight text-app-text">Bridge & Counsel</span>
+          <div className={`flex flex-col gap-0.5 overflow-hidden ${!isSidebarOpen ? 'hidden' : ''}`}>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-app-accent rounded flex items-center justify-center text-app-bg font-bold text-xs shadow-lg shadow-app-accent/20">B</div>
+              <span className="font-bold text-sm tracking-tight text-app-text">Bridge & Counsel</span>
+            </div>
+            <div className="flex items-center gap-1 group cursor-pointer relative">
+              <select 
+                value={appVersion}
+                onChange={(e) => {
+                  const newVersion = e.target.value as 'web' | 'miniprogram';
+                  setAppVersion(newVersion);
+                  if (newVersion === 'miniprogram' && (role === UserRole.ADMINISTRATOR || role === UserRole.OPS)) {
+                    setRole(UserRole.AGENT);
+                  }
+                }}
+                className="bg-transparent text-[10px] font-bold text-app-accent outline-none cursor-pointer hover:underline appearance-none pr-4"
+              >
+                <option value="web" className="bg-app-pane">B&C Web 专业版</option>
+                <option value="miniprogram" className="bg-app-pane">B&C 小程序 移动版</option>
+              </select>
+              <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none">
+                <ChevronRight className="w-2.5 h-2.5 text-app-accent rotate-90" />
+              </div>
+            </div>
           </div>
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-app-bg rounded-lg transition-colors text-app-text-muted">
             {isSidebarOpen ? <Menu className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
@@ -516,7 +1124,7 @@ export default function App() {
           </div>
 
           {/* Credit & Token Dashboard (Agent & Team Leader) */}
-          {(role === UserRole.AGENT || role === UserRole.TEAM_LEADER) && isSidebarOpen && (
+          {appVersion === 'web' && (role === UserRole.AGENT || role === UserRole.TEAM_LEADER) && isSidebarOpen && (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -584,7 +1192,9 @@ export default function App() {
                 onChange={(e) => setRole(e.target.value as UserRole)}
                 className={`w-full appearance-none bg-app-bg border border-app-border rounded-xl p-3 text-sm font-medium focus:ring-2 focus:ring-app-accent/10 outline-none cursor-pointer transition-all text-app-text ${!isSidebarOpen ? 'px-2' : 'pl-10 pr-10'}`}
               >
-                {Object.values(UserRole).map((r) => (
+                {Object.values(UserRole)
+                  .filter(r => appVersion === 'web' || (r !== UserRole.ADMINISTRATOR && r !== UserRole.OPS))
+                  .map((r) => (
                   <option key={r} value={r} className="bg-app-pane">{r}</option>
                 ))}
               </select>
@@ -2659,33 +3269,61 @@ export default function App() {
                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        className="absolute bottom-full left-0 mb-2 w-48 bg-app-pane border border-app-border rounded-xl shadow-xl z-20 overflow-hidden"
+                        className="absolute bottom-full left-0 mb-2 w-64 bg-app-pane border border-app-border rounded-2xl shadow-2xl z-20 overflow-hidden"
                       >
-                        <button 
-                          className="w-full px-4 py-3 text-left text-sm text-app-text hover:bg-app-accent/5 flex items-center gap-3 transition-colors"
-                          onClick={() => {
-                            setIsToolsMenuOpen(false);
-                            setIsThinking(true);
-                            setActiveThinkingSteps([
-                              { id: 'a1', label: '正在提取会话核心要点...', status: 'active' },
-                              { id: 'a2', label: '分析客户意向与潜在风险...', status: 'pending' },
-                              { id: 'a3', label: '生成下一步跟进建议...', status: 'pending' },
-                            ]);
-                            
-                            setTimeout(() => {
-                              const analysisMsg: ChatMessage = {
-                                id: `session-analysis-${Date.now()}`,
-                                role: 'assistant',
-                                text: `### 会话分析报告\n\n**核心要点：**\n1. 客户对香港重疾险的分红机制表现出浓厚兴趣。\n2. 关注点集中在等待期及跨境理赔的便捷性。\n\n**意向评估：** 强烈 (8/10)\n\n**建议行动：**\n- 发送最新的分红实现率报告。\n- 预约下周二进行视频会议，深入解析理赔流程。`
-                              };
-                              setMessages(prev => [...prev, analysisMsg]);
-                              setIsThinking(false);
-                            }, 2500);
-                          }}
-                        >
-                          <Settings2 className="w-4 h-4 text-app-text-muted" />
-                          <span>会话分析</span>
-                        </button>
+                        <div className="p-3 border-b border-app-border bg-app-bg/50">
+                          <p className="text-[10px] font-bold text-app-text-muted uppercase tracking-widest">业务工具箱</p>
+                        </div>
+                        <div className="p-2 grid grid-cols-2 gap-1">
+                          {[
+                            { icon: <Settings2 className="w-4 h-4" />, label: '会话分析', action: 'analysis' },
+                            { icon: <FileText className="w-4 h-4" />, label: '产品对比', action: 'compare' },
+                            { icon: <Zap className="w-4 h-4" />, label: '保费测算', action: 'calc' },
+                            { icon: <Shield className="w-4 h-4" />, label: '合规核查', action: 'compliance' },
+                            { icon: <ImageIcon className="w-4 h-4" />, label: '海报生成', action: 'poster' },
+                            { icon: <FileQuestion className="w-4 h-4" />, label: '条款解析', action: 'terms' },
+                            { icon: <Users className="w-4 h-4" />, label: '客户画像', action: 'persona' },
+                            { icon: <Share2 className="w-4 h-4" />, label: '分享方案', action: 'share' },
+                          ].map((item) => (
+                            <button 
+                              key={item.label}
+                              className="flex items-center gap-3 px-3 py-2.5 text-left text-xs text-app-text hover:bg-app-accent/5 rounded-xl transition-colors group"
+                              onClick={() => {
+                                if (item.action === 'analysis') {
+                                  setIsToolsMenuOpen(false);
+                                  setIsThinking(true);
+                                  setActiveThinkingSteps([
+                                    { id: 'a1', label: '正在提取会话核心要点...', status: 'active' },
+                                    { id: 'a2', label: '分析客户意向与潜在风险...', status: 'pending' },
+                                    { id: 'a3', label: '生成下一步跟进建议...', status: 'pending' },
+                                  ]);
+                                  
+                                  setTimeout(() => {
+                                    const analysisMsg: ChatMessage = {
+                                      id: `session-analysis-${Date.now()}`,
+                                      role: 'assistant',
+                                      text: `### 会话分析报告\n\n**核心要点：**\n1. 客户对香港重疾险的分红机制表现出浓厚兴趣。\n2. 关注点集中在等待期及跨境理赔的便捷性。\n\n**意向评估：** 强烈 (8/10)\n\n**建议行动：**\n- 发送最新的分红实现率报告。\n- 预约下周二进行视频会议，深入解析理赔流程。`
+                                    };
+                                    setMessages(prev => [...prev, analysisMsg]);
+                                    setIsThinking(false);
+                                  }, 2500);
+                                } else {
+                                  setIsToolsMenuOpen(false);
+                                }
+                              }}
+                            >
+                              <div className="p-1.5 bg-app-bg border border-app-border rounded-lg group-hover:border-app-accent/30 group-hover:text-app-accent transition-colors">
+                                {item.icon}
+                              </div>
+                              <span>{item.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                        <div className="p-3 bg-app-bg/50 border-t border-app-border">
+                          <button className="w-full py-2 bg-app-accent text-app-bg text-[10px] font-bold rounded-lg hover:bg-app-accent/90 transition-colors">
+                            管理更多工具
+                          </button>
+                        </div>
                       </motion.div>
                     </>
                   )}
@@ -2713,7 +3351,8 @@ export default function App() {
       </div>
 
       {/* Right Pane: Studio */}
-      <div className="pane-right">
+      {appVersion === 'web' && (
+        <div className="pane-right">
         <div className="p-6 border-b border-app-border flex items-center justify-between bg-app-pane backdrop-blur-md">
           <h2 className="font-bold text-app-text tracking-tight">Studio 创作空间</h2>
           <Layout className="w-5 h-5 text-app-text-muted" />
@@ -2889,6 +3528,7 @@ export default function App() {
           </div>
         </div>
       </div>
+      )}
       {/* Recharge & Acceleration Modal */}
       <AnimatePresence>
         {showRechargeModal && (
