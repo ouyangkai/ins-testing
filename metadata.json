@@ -1,0 +1,7 @@
+{
+  "name": "Bridge & Choice AI",
+  "description": "A professional AI-driven productivity platform for insurance agents, team leaders, administrators, and ops, featuring a NotebookLM-inspired triple-pane layout.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

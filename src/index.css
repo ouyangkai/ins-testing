@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+:root {
+  /* Cream / Warm Organic Theme (Light Mode) */
+  --app-bg: #FDFCF7;
+  --app-pane: #FFFFFF;
+  --app-border: #E8E8E0;
+  --app-text: #1A1A18;
+  --app-text-muted: #71716A;
+  --app-card: #FFFFFF;
+  --app-accent: #0A2540; /* Deep Blue as accent in Cream theme */
+  --app-accent-soft: rgba(10, 37, 64, 0.05);
+}
+
+.dark {
+  /* Deep Blue / Technical Theme (Dark Mode) */
+  --app-bg: #020617;
+  --app-pane: #0F172A;
+  --app-border: #1E293B;
+  --app-text: #F8FAFC;
+  --app-text-muted: #94A3B8;
+  --app-card: #0F172A;
+  --app-accent: #38BDF8; /* Sky Blue accent in Deep Blue theme */
+  --app-accent-soft: rgba(56, 189, 248, 0.1);
+}
+
+@theme {
+  --color-app-bg: var(--app-bg);
+  --color-app-pane: var(--app-pane);
+  --color-app-border: var(--app-border);
+  --color-app-text: var(--app-text);
+  --color-app-text-muted: var(--app-text-muted);
+  --color-app-card: var(--app-card);
+  --color-app-accent: var(--app-accent);
+  --color-app-accent-soft: var(--app-accent-soft);
+  
+  --color-trust-blue: #0A2540;
+  --color-trust-blue-light: #1A3A5A;
+  --color-trust-blue-accent: #00D4FF;
+  --color-intelligent-purple: #635BFF;
+  
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-app-bg text-app-text font-sans antialiased overflow-hidden transition-colors duration-300;
+  }
+}
+
+@layer components {
+  .triple-pane-container {
+    @apply flex h-screen w-full overflow-hidden;
+  }
+  
+  .pane-left {
+    @apply w-64 border-r border-app-border bg-app-pane flex flex-col shrink-0 transition-all duration-300;
+    @apply shadow-[4px_0_24px_rgba(0,0,0,0.2)];
+  }
+  
+  .pane-middle {
+    @apply flex-1 flex flex-col bg-app-bg overflow-hidden relative transition-all duration-300;
+  }
+  
+  .pane-right {
+    @apply w-80 border-l border-app-border bg-app-pane flex flex-col shrink-0 transition-all duration-300;
+    @apply shadow-[-4px_0_24px_rgba(0,0,0,0.2)];
+  }
+  
+  .glass-card {
+    @apply bg-app-card/60 backdrop-blur-md border border-app-border/30 shadow-sm rounded-xl p-4 transition-all duration-300;
+    @apply hover:shadow-md hover:border-app-accent/20;
+  }
+  
+  .thinking-node {
+    @apply flex items-center gap-2 text-[10px] font-mono py-1 px-2 rounded-md transition-colors border border-transparent;
+  }
+  
+  .thinking-node-active {
+    @apply text-app-accent bg-app-accent-soft border-app-accent/20 animate-pulse;
+  }
+  
+  .thinking-node-completed {
+    @apply text-emerald-600 bg-emerald-500/10 border-emerald-500/20;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-app-text-muted/20 rounded-full hover:bg-app-text-muted/40;
+}
+
